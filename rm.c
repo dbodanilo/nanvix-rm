@@ -32,6 +32,7 @@
 #include <sys/stat.h>
 
 #include <unistd.h>
+//#include <nanvix/syscall.h>
 
 /* Software versioning. */
 #define VERSION_MAJOR 1 /* Major version. */
@@ -57,6 +58,10 @@ int rm_r(const char *pathname)
         DIR *dirp;                   /* Directory.               */
         struct dirent *dp;           /* Working directory entry. */
         char filename[NAME_MAX + 1]; /* Working file name.       */
+	
+	char cwd[NAME_MAX + 1];      /* Working directory name.  */
+
+	getcwd(cwd, NAME_MAX);
 
         /* Open directory. */
         if ((dirp = opendir(pathname)) == NULL)
@@ -67,7 +72,10 @@ int rm_r(const char *pathname)
 
         errno = 0;
 
-        /* Read directory entries. */
+//	sys_chdir(pathname);
+	chdir(pathname);
+        
+	/* Read directory entries. */
         filename[NAME_MAX] = '\0';
         while ((dp = readdir(dirp)) != NULL)
         {
@@ -80,7 +88,11 @@ int rm_r(const char *pathname)
 
 //		printf("%s\n", filename);
 
-		unlinkat(dirfd(dirp), filename, 0);
+		unlink(filename);
+
+/* nanvix has not implemented unlinkat() */
+/* nor has it implemented dirfd()        */
+//		unlinkat(dirfd(dirp), filename, 0);
         }
         closedir(dirp);
         
@@ -90,6 +102,9 @@ int rm_r(const char *pathname)
                 fprintf(stderr, "rm: cannot read %s\n", pathname);
                 return (errno);
         }
+
+//	sys_chdir(cwd);
+	chdir(cwd);
 
         return (EXIT_SUCCESS);
 }
@@ -173,6 +188,11 @@ int main(int argc, char *const argv[])
 	if (unlink(args.filename) < 0)
 	{
 		stat(args.filename, &st);
+
+//printf("flags: %d\n", args.flags);
+
+//printf("is dir? %s\n", S_ISDIR(st.st_mode) ? "true" : "false");
+
 		if(S_ISDIR(st.st_mode) 
                    && (args.flags & RM_REC)){
 			rm_r(args.filename);
